@@ -1,0 +1,54 @@
+db.monuments.insertMany([
+  {"name": "The Valley of the Kings", "city": "Luxor", "country": "Egypt", "gps": { "lat": 25.746424, "lng": 32.605309 }},
+  {"name": "Arc de Triomphe", "city": "Paris", "country": "France", "gps": { "lat": 48.873756, "lng": 2.294946 }},
+  {"name": "The Eiffel Tower", "city": "Paris", "country": "France", "gps": { "lat": 48.858093, "lng": 2.294694 }},
+  {"name": "Acropolis", "city": "Athens", "country": "Greece", "gps": { "lat": 37.970833, "lng": 23.726110 }},
+  {"name": "The Great Wall of China", "city": "Huairou", "country": "China", "gps": { "lat": 40.431908, "lng": 116.570374 }},
+  {"name": "The Statue of Liberty", "city": "New York", "country": "USA", "gps": { "lat": 40.689247, "lng": -74.044502 }}
+])
+
+
+-- BSON
+mongodump --uri="mongodb://localhost:27017/sampledb" --collection="sales"
+mongorestore --uri="mongodb://localhost:27017" --nsInclude=sampledb.sales .\dump\sampledb\sales.bson
+
+
+mongoexport --uri="mongodb://localhost:27017/sampledb" --collection="sales" --out=sales.json
+mongoimport --uri="mongodb://localhost:27017/sampledb" --collection="sales" --file="sales.json"
+
+--indexes
+
+db.salaries.find({name:"Clair Smith"}).explain("executionStats");
+db.salaries.getIndexes();
+ db.salaries.createIndex({"name":1})
+  db.salaries.find({name:"Clair Smith",dept:"Sales"}).explain("executionStats")
+  db.salaries.createIndex({name:1,dept:1})
+
+--aggregation
+
+db.sales.aggregate([{$match:{purchaseMethod:"Online"}}])
+db.sales.aggregate([{$match:{purchaseMethod:"Online"}},{$count:"TotalDocuments"}])
+db.sales.aggregate([{$match:{purchaseMethod:"Online"}},{$limit:5}])
+db.sales.aggregate([{$match:{purchaseMethod:"Online"}},{$project:{storeLocation:1,"customer.gender":1,_id:0}},{$limit:3}])
+
+-- group by
+db.sales.aggregate([{$group:{_id:"$purchaseMethod"}}])
+db.sales.aggregate([{$group:{_id:"$purchaseMethod", totalSales:{$count:{}}}}])
+db.sales.aggregate([{$group:{_id:{location:"$storeLocation",method:"$purchaseMethod"}}}])
+db.sales.aggregate([{$group:{_id:{location:"$storeLocation",method:"$purchaseMethod"},totalSales:{$count:{}}}}])
+db.sales.aggregate([{$group:{_id:{location:"$storeLocation",method:"$purchaseMethod"},totalSales:{$count:{}}}},{$sort:{"_id.location":1}}])
+db.sales.aggregate([{$group:{_id:{location:"$storeLocation",method:"$purchaseMethod"},CustomerEmail:{$push:"$customer.email"}}}])
+
+-- salaries collection
+db.salaries.aggregate([{$group:{_id:{year:"$fiscal_year",salary:"$salary"}}}])
+db.salaries.aggregate([{$group:{_id:{year:"$fiscal_year",salary:"$salary"},names:{$push:"$name"}}}])
+db.salaries.aggregate([{$group:{_id:{year:"$fiscal_year"},TotalSalary:{$sum:"$salary"}}}])
+db.salaries.aggregate([{$group:{_id:{year:"$fiscal_year",department:"$dept"},TotalSalary:{$sum:"$salary"}}}]);
+db.salaries.aggregate([{$group:{_id:{year:"$fiscal_year",department:"$dept"},TotalSalary:{$sum:"$salary"}}},{$sort:{"_id.year":-1}}]);
+db.salaries.aggregate([{$group:{_id:{year:"$fiscal_year",department:"$dept"},MaxSalary:{$max:"$salary"}}},{$sort:{"_id.year":1}}])
+db.salaries.aggregate([{$group:{_id:{year:"$fiscal_year",department:"$dept"},MaxSalary:{$max:"$salary"},name:{$push:"$name"}}},{$sort:{"_id.year":1}}])
+
+db.sales.aggregate([{$match:{_id:ObjectId('5bd761dcae323e45a93ccfea')}}])
+db.sales.aggregate([{$match:{_id:ObjectId('5bd761dcae323e45a93ccfea')}},{$unwind:"$items"}])
+
+
